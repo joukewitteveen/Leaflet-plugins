@@ -1,13 +1,13 @@
-.leaflet-bottom {
+.leaflet-bottom.leaflet-left {
 	display: flex;
 	align-items: flex-end;
 }
 
-.leaflet-bottom .leaflet-control-scale {
+.leaflet-bottom.leaflet-left .leaflet-control-scale {
 	clear: left;
 }
 
-.leaflet-bottom .leaflet-control-distance {
+.leaflet-bottom.leaflet-left .leaflet-control-distance {
 	clear: right;
 	margin-bottom: 5px;
 }
@@ -23,7 +23,7 @@
 }
 
 .leaflet-control-distance.distance-active a {
-	color: #2074B6;
+	color: #2074b6;
 	border: 1px solid #f4f4f4;
 }
 
@@ -52,7 +52,7 @@
 	width: 4ch;
 	height: 1.6em;
 	left: -2ch; /* -width/2 */
-	top: -0.8em; /* -height/2 */
+	top: -.8em; /* -height/2 */
 	margin: 0;
 	padding: 0;
 	border-radius: 4px;

@@ -4,7 +4,7 @@ A control for measuring distance along a path.
 
 
 ## Usage
-Check out the [demo](https://joukewitteveen.github.io/Leaflet.Distance/).
+Check out the [demo](https://joukewitteveen.github.io/Leaflet-plugins/Leaflet.Distance/).
 
 
 ## Features

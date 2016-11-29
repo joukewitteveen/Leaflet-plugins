@@ -5,9 +5,19 @@
 
 L.Control.Distance = L.Control.extend({
 	options: {
+		// Redraw when a track point is being dragged
 		updateWhileDragging: true,
+
+		// Reflect the path in the URL
+		useHash: true,
+
+		// Class name for the button on the map
 		iconClass: 'fa fa-arrows-h',
+
+		// Position of the control
 		position: 'bottomleft',
+
+		// Internationalization
 		strings: {
 			measureDistance: 'Measure distance',
 			totalDistance: 'Total distance',
@@ -17,7 +27,7 @@ L.Control.Distance = L.Control.extend({
 	},
 
 	onAdd: function (map) {
-		var container = L.DomUtil.create('div', 'leaflet-control-distance leaflet-bar'),
+		var container = this._container = L.DomUtil.create('div', 'leaflet-control-distance leaflet-bar'),
 		    link = L.DomUtil.create('a', 'distance-button', container);
 		link.href = '#';
 		link.title = this.options.strings.measureDistance;
@@ -33,9 +43,15 @@ L.Control.Distance = L.Control.extend({
 			pane: 'markerPane'
 		});
 		this._markers = [];
-		L.DomEvent.on(container, 'dblclick wheel', L.DomEvent.stopPropagation);
-		L.DomEvent.on(link, 'click', L.DomEvent.stop);
-		L.DomEvent.on(link, 'click', this._toggle, this);
+		L.DomEvent.disableClickPropagation(container)
+		          .disableScrollPropagation(container)
+		          .on(link, 'click', L.DomEvent.stop)
+		          .on(link, 'click', this._toggle, this);
+		if (this.options.useHash) {
+			this._updateHash = L.Util.throttle(this._writeHash, 1000, this);
+			L.DomEvent.on(window, 'hashchange', this._readHash, this);
+			this._readHash();
+		} else this._updateHash = function () {};
 		return container;
 	},
 
@@ -43,9 +59,11 @@ L.Control.Distance = L.Control.extend({
 		this._disable();
 	},
 
+	// Set the correct text on the control and update the markers along the path
 	updateDistance: function () {
+		this._updateHash();
 		if (!this._points.length) {
-			this._distance.textContent = this.options.strings.clickToDraw;
+			this._distance.textContent = this._active ? this.options.strings.clickToDraw : '';
 			return;
 		}
 		var latlngs = this._path.getLatLngs(),
@@ -69,16 +87,19 @@ L.Control.Distance = L.Control.extend({
 	},
 
 	_enable: function () {
+		if (this.options.useHash) L.DomEvent.off(window, 'hashchange', this._readHash, this);
 		this._layers.addTo(this._map);
 		this._layers.addLayer(this._path);
+		this._path.bringToBack();
 		this._map.on('click', this._addPoint, this);
 		L.DomUtil.addClass(this._map.getContainer(), 'leaflet-crosshair leaflet-drag');
 		L.DomUtil.addClass(this.getContainer(), 'distance-active');
-		this.updateDistance();
 		this._active = true;
+		this.updateDistance();
 	},
 
 	_disable: function () {
+		if (this.options.useHash) L.DomEvent.on(window, 'hashchange', this._readHash, this);
 		this._map.off('click', this._addPoint, this);
 		this._layers.remove();
 		L.DomUtil.removeClass(this._map.getContainer(), 'leaflet-crosshair');
@@ -89,8 +110,8 @@ L.Control.Distance = L.Control.extend({
 		this._points = [];
 		this._path.setLatLngs([]);
 		this._markers = [];
-		this._distance.textContent = '';
 		this._active = false;
+		this.updateDistance();
 	},
 
 	_toggle: function () {
@@ -118,7 +139,7 @@ L.Control.Distance = L.Control.extend({
 		this._points.push(point);
 		this._layers.addLayer(point);
 		this._path.addLatLng(e.latlng);
-		this.updateDistance();
+		if (e.type !== 'import') this.updateDistance();
 	},
 
 	_deletePoint: function (e) {
@@ -176,6 +197,43 @@ L.Control.Distance = L.Control.extend({
 			distances.push(total);
 		}
 		return distances;
+	},
+
+	_importPath: function (hash) {
+		var w = 4, res = Base64.resolution(w) - 1;
+		if (!Base64.test(hash, 2 * w)) return false;
+		this._points = [];
+		for (var i = 0, lat, lng; i < hash.length; i += 2 * w) {
+			lat = Base64.toInt(hash.substr(i, w)) / res * 180 - 90;
+			lng = Base64.toInt(hash.substr(i + w, w)) / res * 360 - 180;
+			this._addPoint({
+				type: 'import',
+				target: this,
+				latlng: new L.LatLng(lat, lng)
+			});
+		}
+		return true;
+	},
+
+	_exportPath: function () {
+		var w = 4, res = Base64.resolution(w) - 1, hash = '';
+		for (var i = 0, latlng; i < this._points.length; i++) {
+			latlng = this._points[i].getLatLng();
+			hash += Base64.fromInt(Math.round((latlng.lat + 90) / 180 * res), w)
+			        + Base64.fromInt(Math.round((latlng.lng + 180) / 360 * res), w);
+		}
+		return hash;
+	},
+
+	_readHash: function () {
+		var hash = /[#&]path=([^&]*)/.exec(location.hash);
+		if (hash) if (this._importPath(hash[1])) this._enable();
+	},
+
+	_writeHash: function () {
+		var hash = location.hash.replace(/[#&]path=[^&]*/, '');
+		if (this._active) hash += '&path=' + this._exportPath();
+		window.history.replaceState(window.history.state, document.title, '#' + hash.substr(1));
 	}
 });
 
@@ -247,3 +305,41 @@ L.Marker.Distance = L.Marker.extend({
 L.marker.distance = function (latlng, options) {
 	return new L.Marker.Distance(latlng, options);
 };
+
+
+Base64 = (function () {
+	var chars =
+	//   0       8       16      24      32      40      48      56     63
+	//   v       v       v       v       v       v       v       v      v
+	    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789~_",
+	    values = {};
+	for (var i = 0; i < chars.length; i++) {
+		values[chars[i]] = i;
+	}
+	return {
+		resolution: function (w) {
+			return 1 << (6 * w);
+		},
+
+		test: function (s, w) {
+			if (!w) w = 1;
+			return new RegExp('^(?:[' + chars + ']{' + w + '})*$').test(s);
+		},
+
+		fromInt: function (n, w) {
+			var s = '';
+			while (w--) {
+				s = chars[n & 0x3f] + s;
+				n >>>= 6;
+			}
+			return s;
+		},
+
+		toInt: function (s) {
+			var n = 0, s = s.split('');
+			for (var i = 0; i < s.length; i++)
+				n = (n << 6) + values[s[i]];
+			return n;
+		}
+	};
+})();
