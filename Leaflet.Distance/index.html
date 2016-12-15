@@ -10,6 +10,7 @@
 	<link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css" />
 	<link rel="stylesheet" href="distance.css" /> <!-- Lights, -->
 	<script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+	<script src="../Leaflet.LocationHash/hash.js"></script>
 	<script src="distance.js"></script> <!-- Camera, -->
 </head>
 <body style="margin: 0; padding: 0;">
@@ -17,6 +18,7 @@
 <div id="mapid" style="width: 100vw; height: 100vh;"></div>
 <script>
 	var map = L.map('mapid').setView([51.92, 4.46], 13);
+	L.locationHash(map);
 
 	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 18,

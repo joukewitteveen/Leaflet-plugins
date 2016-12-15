@@ -12,6 +12,10 @@
 	margin-bottom: 5px;
 }
 
+.leaflet-control-distance .distance-button {
+	outline: 0;
+}
+
 .leaflet-control-distance a, .leaflet-control-distance a:hover {
 	display: inline-block;
 	border-radius: 4px;

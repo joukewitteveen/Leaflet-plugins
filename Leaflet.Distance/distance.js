@@ -8,6 +8,9 @@ L.Control.Distance = L.Control.extend({
 		// Redraw when a track point is being dragged
 		updateWhileDragging: true,
 
+		// Size of the circle markers defining the path
+		pointRadius: L.Browser.mobile && L.Browser.touch ? 10 : 4,
+
 		// Reflect the path in the URL
 		useHash: true,
 
@@ -122,7 +125,7 @@ L.Control.Distance = L.Control.extend({
 	_addPoint: function (e) {
 		if (!e.latlng) return;
 		var point = L.circleMarker.draggable(e.latlng, {
-			radius: 4,
+			radius: this.options.pointRadius,
 			weight: 2,
 			color: 'black',
 			fillColor: 'white',
@@ -143,7 +146,7 @@ L.Control.Distance = L.Control.extend({
 	},
 
 	_deletePoint: function (e) {
-		if (e.target.moved) return;
+		if (e.target._moved) return;
 		for (var i = 0; i < this._points.length; i++) {
 			if (this._points[i] === e.target) {
 				this._layers.removeLayer(e.target);
@@ -156,7 +159,10 @@ L.Control.Distance = L.Control.extend({
 
 	_updateMarkers: function (spacing, latlngs, distances) {
 		var marker, fromEnd, latlng;
-		this._points[0].setStyle({ radius: 3, fillColor: 'black' });
+		this._points[0].setStyle({
+			radius: .75 * this.options.pointRadius,
+			fillColor: 'black'
+		});
 		while (marker = this._markers.pop())
 			this._layers.removeLayer(marker);
 		for (var i = 1, next = spacing, j, begin, end, step; i < distances.length; i++) {
@@ -244,7 +250,7 @@ L.control.distance = function (options) {
 
 L.CircleMarker.Draggable = L.CircleMarker.extend({
 	_dragStart: function (e) {
-		this.moved = false;
+		this._moved = false;
 		this._map
 			.on('mousemove', this._drag, this)
 			.once('mouseup', this._dragEnd, this);
@@ -257,7 +263,8 @@ L.CircleMarker.Draggable = L.CircleMarker.extend({
 
 	_drag: function (e) {
 		this.setLatLng(e.latlng);
-		this.moved = true;
+		this._moved = true;
+		L.DomEvent.preventDefault(e);
 		this.fire('drag');
 	},
 
@@ -276,7 +283,7 @@ L.CircleMarker.Draggable = L.CircleMarker.extend({
 });
 L.CircleMarker.Draggable.addInitHook('on', 'mousedown', L.CircleMarker.Draggable.prototype._dragStart);
 L.CircleMarker.Draggable.addInitHook('once', 'mouseout', function () {
-	if (this.options.tooltip && typeof this.moved === 'undefined')
+	if (this.options.tooltip && typeof this._moved === 'undefined')
 		this.bindTooltip(this.options.tooltip);
 });
 
