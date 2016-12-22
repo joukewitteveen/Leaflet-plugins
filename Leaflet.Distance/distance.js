@@ -90,7 +90,8 @@ L.Control.Distance = L.Control.extend({
 	},
 
 	_enable: function () {
-		if (this.options.useHash) L.DomEvent.off(window, 'hashchange', this._readHash, this);
+		if (this.options.useHash)
+			L.DomEvent.off(window, 'hashchange', this._readHash, this);
 		this._layers.addTo(this._map);
 		this._layers.addLayer(this._path);
 		this._path.bringToBack();
@@ -102,7 +103,8 @@ L.Control.Distance = L.Control.extend({
 	},
 
 	_disable: function () {
-		if (this.options.useHash) L.DomEvent.on(window, 'hashchange', this._readHash, this);
+		if (this.options.useHash)
+			L.DomEvent.on(window, 'hashchange', this._readHash, this);
 		this._map.off('click', this._addPoint, this);
 		this._layers.remove();
 		L.DomUtil.removeClass(this._map.getContainer(), 'leaflet-crosshair');
@@ -134,9 +136,9 @@ L.Control.Distance = L.Control.extend({
 			tooltip: this.options.strings.clickToRemove,
 			pane: 'markerPane'
 		})
-			.on('click', this._deletePoint, this)
 			.on('click', L.DomEvent.stopPropagation)
 			.on('dragend', this._updatePath, this);
+		setTimeout(L.bind(point.on, point, 'click', this._deletePoint, this), 500);
 		if (this.options.updateWhileDragging)
 			point.on('drag', this._updatePath, this);
 		this._points.push(point);
@@ -233,7 +235,7 @@ L.Control.Distance = L.Control.extend({
 
 	_readHash: function () {
 		var hash = /[#&]path=([^&]*)/.exec(location.hash);
-		if (hash) if (this._importPath(hash[1])) this._enable();
+		if (hash && this._importPath(hash[1])) this._enable();
 	},
 
 	_writeHash: function () {
@@ -262,9 +264,9 @@ L.CircleMarker.Draggable = L.CircleMarker.extend({
 	},
 
 	_drag: function (e) {
+		if (!e.latlng || this.getLatLng().equals(e.latlng)) return;
 		this.setLatLng(e.latlng);
 		this._moved = true;
-		L.DomEvent.preventDefault(e);
 		this.fire('drag');
 	},
 
@@ -277,7 +279,7 @@ L.CircleMarker.Draggable = L.CircleMarker.extend({
 		else
 			L.DomUtil.removeClass(map.getContainer(), 'leaflet-grab');
 		if (this.options.tooltip)
-			this.bindTooltip(this.options.tooltip);
+			setTimeout(L.bind(this.bindTooltip, this, this.options.tooltip), 500);
 		this.fire('dragend', e);
 	}
 });
